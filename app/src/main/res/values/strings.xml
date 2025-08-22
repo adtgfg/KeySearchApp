@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">KeySearchApp</string>
+    <string name="start">ابدأ</string>
+    <string name="pause">إيقاف مؤقت</string>
+    <string name="resume">استئناف</string>
+    <string name="stop">إيقاف</string>
+    <string name="ready">جاهز للبدء</string>
 </resources>
