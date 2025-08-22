@@ -1,113 +1,102 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true">
 
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:padding="16dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
 
-        <EditText
-            android:id="@+id/targetEdit"
+        <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Target Address"
-            android:inputType="text"
-            android:maxLines="1" />
+            android:hint="@string/target_hint">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/targetEdit"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textNoSuggestions|textVisiblePassword"/>
+        </com.google.android.material.textfield.TextInputLayout>
 
-        <LinearLayout
+        <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:weightSum="2"
+            android:hint="@string/start_key_hint"
             android:layout_marginTop="12dp">
-
-            <EditText
+            <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/startEdit"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="Start Key"
-                android:inputType="number" />
+                android:inputType="number"/>
+        </com.google.android.material.textfield.TextInputLayout>
 
-            <View
-                android:layout_width="12dp"
-                android:layout_height="0dp" />
-
-            <EditText
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/end_key_hint"
+            android:layout_marginTop="12dp">
+            <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/endEdit"
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="End Key"
-                android:inputType="number" />
-        </LinearLayout>
+                android:inputType="number"/>
+        </com.google.android.material.textfield.TextInputLayout>
 
         <TextView
             android:id="@+id/statusText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/ready"
-            android:textSize="18sp"
-            android:paddingTop="16dp"
-            android:paddingBottom="8dp" />
+            android:layout_marginTop="16dp"/>
 
         <ProgressBar
             android:id="@+id/progressBar"
             style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="match_parent"
-            android:layout_height="10dp"
-            android:max="100"
-            android:progress="0" />
+            android:layout_height="8dp"
+            android:layout_marginTop="12dp"
+            android:max="100"/>
 
         <TextView
             android:id="@+id/progressStatsText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Waiting for search to start..."
-            android:paddingTop="8dp" />
+            android:layout_marginTop="8dp"/>
 
         <LinearLayout
+            android:orientation="horizontal"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center"
             android:layout_marginTop="16dp">
 
             <Button
                 android:id="@+id/startBtn"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="@string/start" />
-
-            <View
-                android:layout_width="8dp"
-                android:layout_height="0dp" />
+                android:layout_height="wrap_content"
+                android:text="@string/start"/>
 
             <Button
                 android:id="@+id/pauseBtn"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:layout_height="wrap_content"
                 android:text="@string/pause"
-                android:enabled="false" />
-
-            <View
-                android:layout_width="8dp"
-                android:layout_height="0dp" />
+                android:layout_marginStart="8dp"/>
 
             <Button
                 android:id="@+id/stopBtn"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:layout_height="wrap_content"
                 android:text="@string/stop"
-                android:enabled="false" />
+                android:layout_marginStart="8dp"/>
         </LinearLayout>
 
     </LinearLayout>
-</ScrollView>
+</androidx.core.widget.NestedScrollView>
