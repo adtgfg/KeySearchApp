@@ -8,42 +8,33 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+
+    runs-on: ubuntu-24.04
 
     steps:
-      # 1- تنزيل الكود
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # 2- إعداد JDK
       - name: Set up JDK 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
-          java-version: '17'
           distribution: 'temurin'
-          cache: gradle
+          java-version: '17'
 
-      # 3- إعداد Android SDK
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          packages: |
-            platform-tools
-            platforms;android-34
-            build-tools;34.0.0
-          accept-android-sdk-licenses: true
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v3
 
-      # 4- إعطاء صلاحية لـ gradlew
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # 5- بناء APK (debug)
       - name: Build Debug APK
         run: ./gradlew assembleDebug --stacktrace
 
-      # 6- رفع ملف الـ APK كأرتيفاكت
+      - name: Run Tests
+        run: ./gradlew test
+
       - name: Upload APK
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: app-debug
           path: app/build/outputs/apk/debug/app-debug.apk
