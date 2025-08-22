@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace 'com.example.keysearchapp'
-    compileSdk 34   // تحديث من 33 → 34
+    compileSdk 34
 
     defaultConfig {
         applicationId "com.example.keysearchapp"
         minSdk 24
-        targetSdk 34   // تحديث من 33 → 34
+        targetSdk 34
         versionCode 1
         versionName "1.0"
 
@@ -30,13 +30,11 @@ android {
         }
     }
 
-    // تحديث خيارات الجافا
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
 
-    // تحديث خيارات كوتلن
     kotlinOptions {
         jvmTarget = '17'
     }
@@ -44,24 +42,23 @@ android {
     externalNativeBuild {
         cmake {
             path file('src/main/cpp/CMakeLists.txt')
-            // لا تقيّد النسخة هنا، خليه ياخذ الافتراضي من Android SDK
+            // شلنا version عشان ما يسبب مشاكل في Actions
         }
     }
 }
 
 dependencies {
-    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.core:core-ktx:1.12.0'
     implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'com.google.android.material:material:1.11.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
 
-    // اختبارات
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 
-    // Lifecycle - ViewModel + LiveData
-    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.4'
-    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.8.4'
-    implementation 'androidx.activity:activity-ktx:1.9.1'
+    // ViewModel and LiveData
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2'
+    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.6.2'
+    implementation 'androidx.activity:activity-ktx:1.8.2'
 }
