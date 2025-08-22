@@ -4,5 +4,11 @@
     <string name="pause">إيقاف مؤقت</string>
     <string name="resume">استئناف</string>
     <string name="stop">إيقاف</string>
+    <string name="target_hint">العنوان الهدف (Base58)</string>
+    <string name="start_key_hint">بداية النطاق</string>
+    <string name="end_key_hint">نهاية النطاق</string>
     <string name="ready">جاهز للبدء</string>
+    <string name="searching">جارٍ البحث...</string>
+    <string name="paused">متوقف مؤقتًا</string>
+    <string name="found">تم العثور على المفتاح!</string>
 </resources>
