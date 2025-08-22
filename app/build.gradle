@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace 'com.example.keysearchapp'
-    compileSdk 33
+    compileSdk 34   // تحديث من 33 → 34
 
     defaultConfig {
         applicationId "com.example.keysearchapp"
         minSdk 24
-        targetSdk 33
+        targetSdk 34   // تحديث من 33 → 34
         versionCode 1
         versionName "1.0"
 
@@ -29,33 +29,39 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+
+    // تحديث خيارات الجافا
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
+
+    // تحديث خيارات كوتلن
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '17'
     }
 
     externalNativeBuild {
         cmake {
             path file('src/main/cpp/CMakeLists.txt')
-            version "3.31.6"
+            // لا تقيّد النسخة هنا، خليه ياخذ الافتراضي من Android SDK
         }
     }
 }
 
 dependencies {
-    implementation 'androidx.core:core-ktx:1.9.0'
+    implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'com.google.android.material:material:1.8.0'
+    implementation 'com.google.android.material:material:1.12.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+
+    // اختبارات
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 
-    // Add ViewModel and LiveData dependencies
-    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.5.1'
-    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.5.1'
-    implementation 'androidx.activity:activity-ktx:1.6.1'
+    // Lifecycle - ViewModel + LiveData
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.4'
+    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.8.4'
+    implementation 'androidx.activity:activity-ktx:1.9.1'
 }
