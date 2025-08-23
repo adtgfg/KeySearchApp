@@ -31,7 +31,7 @@ class SearchViewModel : ViewModel() {
         _statsText.value = "Starting up..."
         _foundKey.value = null
     }
-    
+
     fun forceStopState(){
         _searchState.value = State.STOPPED
     }
@@ -57,7 +57,7 @@ class SearchViewModel : ViewModel() {
             }
         }
     }
-    
+
     fun setPaused(isPaused: Boolean){
         _searchState.value = if(isPaused) State.PAUSED else State.SEARCHING
     }
@@ -73,4 +73,3 @@ class SearchViewModel : ViewModel() {
         }
     }
 }
-
