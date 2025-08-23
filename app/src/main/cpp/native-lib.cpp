@@ -98,7 +98,6 @@ void search_range_thread(ThreadParams* params) {
     jmethodID onKeyFound_mid = env->GetMethodID(cls, "onKeyFound", "(Ljava/lang/String;)V");
     jmethodID onProgressUpdate_mid = env->GetMethodID(cls, "onProgressUpdate", "(J)V");
     jmethodID onSearchFinished_mid = env->GetMethodID(cls, "onSearchFinished", "()V");
-    jmethodID getExternalFilesDir_mid = env->GetMethodID(cls, "getExternalFilesDir", "(Ljava/lang/String;)Ljava/io/File;");
 
     uint64_t keys_checked = 0;
     auto last_update = std::chrono::steady_clock::now();
@@ -210,4 +209,4 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_example_keysearchapp_SearchService_stopSearchNative(JNIEnv *env, jobject thiz) {
     g_found.store(true);
-}                                               
+}
