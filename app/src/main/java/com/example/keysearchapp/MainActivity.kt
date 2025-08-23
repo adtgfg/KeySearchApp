@@ -1,5 +1,5 @@
 package com.example.keysearchapp
-import androidx.activity.viewModels
+
 import android.os.Bundle
 import android.widget.Button
 import android.widget.ProgressBar
@@ -55,14 +55,9 @@ class MainActivity : AppCompatActivity() {
         setupClickListeners()
         observeViewModel()
 
-        // If a search was running before rotation, restart the native part if needed
-        // Note: For simplicity, this implementation doesn't resume the C++ layer.
-        // A more advanced version would use a background Service.
         if (viewModel.searchState.value == SearchViewModel.State.SEARCHING) {
-             // In this design, a rotation will effectively stop the C++ search.
-             // We reset the state to Stopped to reflect this.
-             viewModel.forceStopState()
-             Toast.makeText(this, "Search was interrupted by configuration change.", Toast.LENGTH_SHORT).show()
+            viewModel.forceStopState()
+            Toast.makeText(this, "Search was interrupted by configuration change.", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -120,7 +115,6 @@ class MainActivity : AppCompatActivity() {
 
         stopBtn.setOnClickListener {
             stopSearchNative()
-            // The UI will update once the onSearchFinished callback is received.
             statusText.text = "جاري الإيقاف..."
         }
     }
@@ -185,10 +179,8 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-    
+
     override fun onDestroy() {
-        // The native search might continue if the app is killed, not just activity destroyed.
-        // But for normal closure, this ensures it stops.
         if (!isChangingConfigurations) {
            stopSearchNative()
         }
