@@ -1,106 +1,99 @@
 package com.example.keysearchapp
 
-import android.os.Bundle
-import android.widget.*
-import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
 
-class MainActivity : AppCompatActivity() {
+class SearchViewModel : ViewModel() {
 
-    private lateinit var viewModel: SearchViewModel
-    private lateinit var startButton: Button
-    private lateinit var pauseButton: Button
-    private lateinit var resumeButton: Button
-    private lateinit var stopButton: Button
-    private lateinit var progressText: TextView
-    private lateinit var targetInput: EditText
-    private lateinit var startInput: EditText
-    private lateinit var endInput: EditText
+    enum class State { STOPPED, SEARCHING, PAUSED, FOUND }
 
-    companion object {
-        // ✅ تعديل هنا: تحميل مكتبة native-lib فقط
-        // OpenSSL (ssl, crypto) يتم تحميلها بشكل تبعي من jniLibs
-        init {
-            System.loadLibrary("native-lib")
-        }
+    private val _searchState = MutableLiveData(State.STOPPED)
+    val searchState: LiveData<State> = _searchState
+
+    private val _progress = MutableLiveData(0)
+    val progress: LiveData<Int> = _progress
+
+    private val _statsText = MutableLiveData("Waiting for search to start...")
+    val statsText: LiveData<String> = _statsText
+
+    private val _foundKey = MutableLiveData<String?>(null)
+    val foundKey: LiveData<String?> = _foundKey
+
+    private var totalKeys: Long = 0
+    private var searchStartTime: Long = 0
+
+    // ربط MainActivity لتتمكن من استدعاء دوال native
+    private var mainActivity: MainActivity? = null
+
+    // بدء البحث واستدعاء الدالة الأصلية
+    fun startSearch(start: Long, end: Long, target: String, activity: MainActivity) {
+        mainActivity = activity
+        totalKeys = end - start + 1
+        searchStartTime = System.currentTimeMillis()
+        _searchState.value = State.SEARCHING
+        _progress.value = 0
+        _statsText.value = "Starting up..."
+        _foundKey.value = null
+        // استدعاء البحث من native-lib
+        mainActivity?.startSearchNative(start, end, target, mainActivity!!)
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+    // إيقاف مؤقت للبحث
+    fun pauseSearch() {
+        mainActivity?.pauseSearchNative()
+        _searchState.value = State.PAUSED
+        _statsText.value = "تم إيقاف البحث مؤقتًا."
+    }
 
-        startButton = findViewById(R.id.startButton)
-        pauseButton = findViewById(R.id.pauseButton)
-        resumeButton = findViewById(R.id.resumeButton)
-        stopButton = findViewById(R.id.stopButton)
-        progressText = findViewById(R.id.progressText)
-        targetInput = findViewById(R.id.targetInput)
-        startInput = findViewById(R.id.startInput)
-        endInput = findViewById(R.id.endInput)
+    // استئناف البحث
+    fun resumeSearch() {
+        mainActivity?.resumeSearchNative()
+        _searchState.value = State.SEARCHING
+        _statsText.value = "تم استئناف البحث."
+    }
 
-        viewModel = ViewModelProvider(this)[SearchViewModel::class.java]
+    // إيقاف البحث نهائيًا
+    fun stopSearch() {
+        mainActivity?.stopSearchNative()
+        _searchState.value = State.STOPPED
+        _statsText.value = "تم إيقاف البحث من قبل المستخدم."
+    }
 
-        // ✅ ربط LiveData مع الواجهة
-        viewModel.progress.observe(this) { progress ->
-            progressText.text = "Keys checked: $progress"
-        }
+    // عند إيجاد مفتاح
+    fun onKeyFound(key: String) {
+        _searchState.value = State.FOUND
+        _foundKey.value = key
+        _progress.value = 100
+        _statsText.value = "تم إيجاد المفتاح!"
+    }
 
-        viewModel.foundKey.observe(this) { key ->
-            Toast.makeText(this, "Key Found: $key", Toast.LENGTH_LONG).show()
-        }
-
-        viewModel.isFinished.observe(this) {
-            Toast.makeText(this, "Search Finished", Toast.LENGTH_SHORT).show()
-        }
-
-        // ✅ أزرار التحكم
-        startButton.setOnClickListener {
-            val start = startInput.text.toString().toLongOrNull() ?: 0L
-            val end = endInput.text.toString().toLongOrNull() ?: 1000000L
-            val target = targetInput.text.toString()
-
-            if (target.isNotEmpty()) {
-                viewModel.startSearch(start, end, target, this)
-            } else {
-                Toast.makeText(this, "Please enter target address", Toast.LENGTH_SHORT).show()
+    // تحديث التقدم
+    fun onProgressUpdate(keysChecked: Long) {
+        if (_searchState.value == State.SEARCHING || _searchState.value == State.PAUSED) {
+            if (totalKeys > 0) {
+                _progress.value = ((keysChecked * 100) / totalKeys).toInt()
+            }
+            val elapsedTimeSec = (System.currentTimeMillis() - searchStartTime) / 1000.0
+            if (elapsedTimeSec > 1) { // انتظر ثانية لمعدل ثابت
+                val keysPerSecond = keysChecked / elapsedTimeSec
+                _statsText.value = String.format(
+                    "%.0f مفتاح/ثانية | فحص: %d / %d",
+                    keysPerSecond, keysChecked, totalKeys
+                )
             }
         }
-
-        pauseButton.setOnClickListener {
-            viewModel.pauseSearch()
-        }
-
-        resumeButton.setOnClickListener {
-            viewModel.resumeSearch()
-        }
-
-        stopButton.setOnClickListener {
-            viewModel.stopSearch()
-        }
     }
 
-    // ✅ تعريف الدوال التي يستدعيها C++ عبر JNI
-    external fun startSearchNative(start: Long, end: Long, target: String, callback: Any)
-    external fun pauseSearchNative()
-    external fun resumeSearchNative()
-    external fun stopSearchNative()
-
-    // ✅ Callbacks التي يستدعيها الكود C++
-    fun onKeyFound(key: String) {
-        runOnUiThread {
-            viewModel.onKeyFound(key)
-        }
-    }
-
-    fun onProgressUpdate(keysChecked: Long) {
-        runOnUiThread {
-            viewModel.onProgressUpdate(keysChecked)
-        }
-    }
-
+    // إنهاء البحث
     fun onSearchFinished() {
-        runOnUiThread {
-            viewModel.onSearchFinished()
+        if (_searchState.value != State.FOUND) {
+            _searchState.value = State.STOPPED
+            if (_progress.value != 100) {
+                _statsText.value = "تم إيقاف البحث من قبل المستخدم."
+            } else {
+                _statsText.value = "اكتمل البحث ولم يتم إيجاد المفتاح."
+            }
         }
     }
 }
