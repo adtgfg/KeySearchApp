@@ -11,6 +11,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
+        <!-- حقل إدخال العنوان -->
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -22,6 +23,7 @@
                 android:inputType="textNoSuggestions|textVisiblePassword"/>
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- بداية النطاق -->
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -34,6 +36,7 @@
                 android:inputType="number"/>
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- نهاية النطاق -->
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -46,6 +49,7 @@
                 android:inputType="number"/>
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- حالة البحث -->
         <TextView
             android:id="@+id/statusText"
             android:layout_width="match_parent"
@@ -53,6 +57,7 @@
             android:text="@string/ready"
             android:layout_marginTop="16dp"/>
 
+        <!-- البار الخاص بالتقدم -->
         <ProgressBar
             android:id="@+id/progressBar"
             style="?android:attr/progressBarStyleHorizontal"
@@ -61,6 +66,7 @@
             android:layout_marginTop="12dp"
             android:max="100"/>
 
+        <!-- النص الإحصائي -->
         <TextView
             android:id="@+id/progressStatsText"
             android:layout_width="match_parent"
@@ -68,6 +74,7 @@
             android:text="Waiting for search to start..."
             android:layout_marginTop="8dp"/>
 
+        <!-- أزرار التحكم -->
         <LinearLayout
             android:orientation="horizontal"
             android:layout_width="match_parent"
@@ -87,6 +94,14 @@
                 android:layout_weight="1"
                 android:layout_height="wrap_content"
                 android:text="@string/pause"
+                android:layout_marginStart="8dp"/>
+
+            <Button
+                android:id="@+id/resumeBtn"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="@string/resume"
                 android:layout_marginStart="8dp"/>
 
             <Button
