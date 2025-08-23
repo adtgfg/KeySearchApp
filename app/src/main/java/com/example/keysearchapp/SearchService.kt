@@ -10,7 +10,7 @@ class SearchService : Service() {
         val start = intent?.getLongExtra("start", 0L) ?: 0L
         val end = intent?.getLongExtra("end", 0L) ?: 1000000L
         val target = intent?.getStringExtra("target") ?: ""
-        // عرض Notification دائم
+        // عرض Notification دائم بدون أيقونة مخصصة
         createNotification()
         // استدعاء البحث عبر JNI
         startSearchNative(start, end, target, this)
@@ -27,7 +27,7 @@ class SearchService : Service() {
         val notification = NotificationCompat.Builder(this, channelId)
             .setContentTitle("جاري البحث عن المفتاح")
             .setContentText("يمكنك متابعة التقدم من التطبيق")
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(android.R.drawable.ic_dialog_info) // أيقونة افتراضية للنظام
             .build()
         startForeground(1, notification)
     }
