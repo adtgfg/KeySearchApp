@@ -9,9 +9,10 @@
 #include <openssl/ripemd.h>
 #include <android/log.h>
 #include <chrono>
+#include <algorithm>
 
 #define LOG_TAG "KeySearch"
-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO,LOG_TAG,__VA_ARGS__)
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
 
 std::atomic<bool> g_found(false);
 std::atomic<bool> g_pause(false);
@@ -22,41 +23,95 @@ const char* BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopq
 std::string base58_encode(const std::vector<unsigned char>& input) {
     std::vector<unsigned char> b(input.begin(), input.end());
     int zeroes = 0;
-    while (zeroes < b.size() && b[zeroes] == 0) zeroes++;
+    while (zeroes < (int)b.size() && b[zeroes] == 0) zeroes++;
 
     std::string result;
+    if (b.empty()) return result;
+
+    std::vector<unsigned char> temp;
     while (!b.empty()) {
         int carry = 0;
-        std::vector<unsigned char> b58;
-        for (size_t i = 0; i < b.size(); i++) {
+        temp.clear();
+        for (size_t i = 0; i < b.size(); ++i) {
             int val = (int)b[i] + carry * 256;
             carry = val / 58;
-            b58.push_back(val % 58);
+            temp.push_back((unsigned char)(val % 58));
         }
-        result += BASE58_ALPHABET[carry];
-        b.clear();
-        for (auto it = b58.rbegin(); it != b58.rend(); ++it) {
-            if (*it != 0 || !b.empty()) b.push_back(*it);
+        result.push_back(BASE58_ALPHABET[carry]);
+        // divide b by 58
+        std::vector<unsigned char> newb;
+        int rem = 0;
+        for (size_t i = 0; i < b.size(); ++i) {
+            int val = rem * 256 + b[i];
+            int q = val / 58;
+            rem = val % 58;
+            if (!newb.empty() || q != 0) newb.push_back((unsigned char)q);
         }
+        b.swap(newb);
     }
-    for (int i = 0; i < zeroes; i++) result = BASE58_ALPHABET[0] + result;
+
+    std::reverse(result.begin(), result.end());
+    for (int i = 0; i < zeroes; ++i) result.insert(result.begin(), BASE58_ALPHABET[0]);
     return result;
 }
 
-void save_result(const std::string& key) {
+void save_result_to_dir(const std::string& dirPath, const std::string& key) {
     std::lock_guard<std::mutex> lock(file_mutex);
-    std::ofstream ofs("/sdcard/Download/found_keys.txt", std::ios::app);
-    ofs << key << std::endl;
-    LOGI("Saved key: %s", key.c_str());
+    std::string full = dirPath;
+    if (!full.empty() && full.back() != '/') full += "/";
+    full += "found_keys.txt";
+    std::ofstream ofs(full, std::ios::app);
+    if (ofs.is_open()) {
+        ofs << key << std::endl;
+        LOGI("Saved key to %s: %s", full.c_str(), key.c_str());
+    } else {
+        LOGI("Failed to open file for writing: %s", full.c_str());
+    }
 }
 
-void search_range(uint64_t start, uint64_t end, const std::string& target_address, JNIEnv* env, jobject callback) {
+struct ThreadParams {
+    JavaVM* jvm;
+    jobject callbackGlobal;
+    uint64_t start;
+    uint64_t end;
+    std::string target_address;
+};
+
+void search_range_thread(ThreadParams* params) {
+    JavaVM* jvm = params->jvm;
+    jobject callback = params->callbackGlobal;
+    uint64_t start = params->start;
+    uint64_t end = params->end;
+    std::string target_address = params->target_address;
+
+    JNIEnv* env = nullptr;
+    if (jvm->AttachCurrentThread(&env, nullptr) != JNI_OK) {
+        LOGI("Failed to attach thread to JVM");
+        // cleanup: delete params and global ref using original JVM? best-effort: try to get env from main thread not possible here
+        // Attempt to delete global ref via a temporary attach/detach if possible
+        // For simplicity, avoid undefined behavior — leak params in this rare failure case
+        delete params;
+        return;
+    }
+
     jclass cls = env->GetObjectClass(callback);
+
     jmethodID onKeyFound_mid = env->GetMethodID(cls, "onKeyFound", "(Ljava/lang/String;)V");
     jmethodID onProgressUpdate_mid = env->GetMethodID(cls, "onProgressUpdate", "(J)V");
     jmethodID onSearchFinished_mid = env->GetMethodID(cls, "onSearchFinished", "()V");
+    jmethodID getExternalFilesDir_mid = env->GetMethodID(cls, "getExternalFilesDir", "(Ljava/lang/String;)Ljava/io/File;");
 
-    uint64_t total_keys = end - start + 1;
+    jclass fileCls = nullptr;
+    jmethodID getAbsolutePath_mid = nullptr;
+    if (getExternalFilesDir_mid != nullptr) {
+        jclass localFileCls = env->FindClass("java/io/File");
+        if (localFileCls != nullptr) {
+            fileCls = (jclass)env->NewGlobalRef(localFileCls);
+            env->DeleteLocalRef(localFileCls);
+            getAbsolutePath_mid = env->GetMethodID(fileCls, "getAbsolutePath", "()Ljava/lang/String;");
+        }
+    }
+
     uint64_t keys_checked = 0;
     auto last_update = std::chrono::steady_clock::now();
 
@@ -85,22 +140,52 @@ void search_range(uint64_t start, uint64_t end, const std::string& target_addres
         keys_checked++;
 
         if (keys_checked % 50000 == 0 || std::chrono::steady_clock::now() - last_update > std::chrono::seconds(1)) {
-            env->CallVoidMethod(callback, onProgressUpdate_mid, (jlong)keys_checked);
+            if (onProgressUpdate_mid != nullptr) env->CallVoidMethod(callback, onProgressUpdate_mid, (jlong)keys_checked);
             last_update = std::chrono::steady_clock::now();
         }
 
         if (current_address == target_address) {
             g_found.store(true);
-            save_result(std::to_string(k));
 
-            jstring jkey = env->NewStringUTF(std::to_string(k).c_str());
-            env->CallVoidMethod(callback, onKeyFound_mid, jkey);
-            env->DeleteLocalRef(jkey);
+            std::string dirPath;
+            if (getExternalFilesDir_mid != nullptr && getAbsolutePath_mid != nullptr) {
+                jobject fileObj = env->CallObjectMethod(callback, getExternalFilesDir_mid, (jstring) nullptr);
+                if (fileObj != nullptr) {
+                    jstring pathJ = (jstring)env->CallObjectMethod(fileObj, getAbsolutePath_mid);
+                    if (pathJ != nullptr) {
+                        const char* pathC = env->GetStringUTFChars(pathJ, nullptr);
+                        if (pathC != nullptr) dirPath = pathC;
+                        env->ReleaseStringUTFChars(pathJ, pathC);
+                        env->DeleteLocalRef(pathJ);
+                    }
+                    env->DeleteLocalRef(fileObj);
+                }
+            }
+
+            std::string foundStr = std::to_string(k);
+            if (!dirPath.empty()) {
+                save_result_to_dir(dirPath, foundStr);
+            } else {
+                LOGI("Found key (no dir): %s", foundStr.c_str());
+            }
+
+            if (onKeyFound_mid != nullptr) {
+                jstring jkey = env->NewStringUTF(foundStr.c_str());
+                env->CallVoidMethod(callback, onKeyFound_mid, jkey);
+                env->DeleteLocalRef(jkey);
+            }
             break;
         }
     }
 
-    env->CallVoidMethod(callback, onSearchFinished_mid);
+    if (onSearchFinished_mid != nullptr) env->CallVoidMethod(callback, onSearchFinished_mid);
+
+    if (fileCls != nullptr) env->DeleteGlobalRef(fileCls);
+    env->DeleteGlobalRef(callback);
+
+    jvm->DetachCurrentThread();
+
+    delete params;
 }
 
 extern "C"
@@ -112,8 +197,26 @@ Java_com_example_keysearchapp_MainActivity_startSearchNative(JNIEnv *env, jobjec
     const char* target = env->GetStringUTFChars(targetAddr, 0);
     g_found.store(false);
     g_pause.store(false);
-    std::thread t(search_range, (uint64_t)start, (uint64_t)end, std::string(target), env, callback);
+
+    JavaVM* jvm = nullptr;
+    if (env->GetJavaVM(&jvm) != JNI_OK) {
+        LOGI("Failed to get JavaVM");
+        env->ReleaseStringUTFChars(targetAddr, target);
+        return;
+    }
+
+    jobject callbackGlobal = env->NewGlobalRef(callback);
+
+    ThreadParams* params = new ThreadParams();
+    params->jvm = jvm;
+    params->callbackGlobal = callbackGlobal;
+    params->start = (uint64_t)start;
+    params->end = (uint64_t)end;
+    params->target_address = std::string(target ? target : "");
+
+    std::thread t(search_range_thread, params);
     t.detach();
+
     env->ReleaseStringUTFChars(targetAddr, target);
 }
 
@@ -134,4 +237,3 @@ JNIEXPORT void JNICALL
 Java_com_example_keysearchapp_MainActivity_stopSearchNative(JNIEnv *env, jobject thiz) {
     g_found.store(true);
 }
-
