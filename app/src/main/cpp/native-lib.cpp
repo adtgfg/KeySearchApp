@@ -20,6 +20,7 @@ std::mutex file_mutex;
 
 const char* BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
+// Base58 encode helper
 std::string base58_encode(const std::vector<unsigned char>& input) {
     std::vector<unsigned char> b(input.begin(), input.end());
     int zeroes = 0;
@@ -38,7 +39,7 @@ std::string base58_encode(const std::vector<unsigned char>& input) {
             temp.push_back((unsigned char)(val % 58));
         }
         result.push_back(BASE58_ALPHABET[carry]);
-        // divide b by 58
+
         std::vector<unsigned char> newb;
         int rem = 0;
         for (size_t i = 0; i < b.size(); ++i) {
@@ -55,6 +56,7 @@ std::string base58_encode(const std::vector<unsigned char>& input) {
     return result;
 }
 
+// حفظ المفاتيح المكتشفة
 void save_result_to_dir(const std::string& dirPath, const std::string& key) {
     std::lock_guard<std::mutex> lock(file_mutex);
     std::string full = dirPath;
@@ -77,6 +79,7 @@ struct ThreadParams {
     std::string target_address;
 };
 
+// البحث في نطاق
 void search_range_thread(ThreadParams* params) {
     JavaVM* jvm = params->jvm;
     jobject callback = params->callbackGlobal;
@@ -86,10 +89,6 @@ void search_range_thread(ThreadParams* params) {
 
     JNIEnv* env = nullptr;
     if (jvm->AttachCurrentThread(&env, nullptr) != JNI_OK) {
-        LOGI("Failed to attach thread to JVM");
-        // cleanup: delete params and global ref using original JVM? best-effort: try to get env from main thread not possible here
-        // Attempt to delete global ref via a temporary attach/detach if possible
-        // For simplicity, avoid undefined behavior — leak params in this rare failure case
         delete params;
         return;
     }
@@ -100,17 +99,6 @@ void search_range_thread(ThreadParams* params) {
     jmethodID onProgressUpdate_mid = env->GetMethodID(cls, "onProgressUpdate", "(J)V");
     jmethodID onSearchFinished_mid = env->GetMethodID(cls, "onSearchFinished", "()V");
     jmethodID getExternalFilesDir_mid = env->GetMethodID(cls, "getExternalFilesDir", "(Ljava/lang/String;)Ljava/io/File;");
-
-    jclass fileCls = nullptr;
-    jmethodID getAbsolutePath_mid = nullptr;
-    if (getExternalFilesDir_mid != nullptr) {
-        jclass localFileCls = env->FindClass("java/io/File");
-        if (localFileCls != nullptr) {
-            fileCls = (jclass)env->NewGlobalRef(localFileCls);
-            env->DeleteLocalRef(localFileCls);
-            getAbsolutePath_mid = env->GetMethodID(fileCls, "getAbsolutePath", "()Ljava/lang/String;");
-        }
-    }
 
     uint64_t keys_checked = 0;
     auto last_update = std::chrono::steady_clock::now();
@@ -147,28 +135,7 @@ void search_range_thread(ThreadParams* params) {
         if (current_address == target_address) {
             g_found.store(true);
 
-            std::string dirPath;
-            if (getExternalFilesDir_mid != nullptr && getAbsolutePath_mid != nullptr) {
-                jobject fileObj = env->CallObjectMethod(callback, getExternalFilesDir_mid, (jstring) nullptr);
-                if (fileObj != nullptr) {
-                    jstring pathJ = (jstring)env->CallObjectMethod(fileObj, getAbsolutePath_mid);
-                    if (pathJ != nullptr) {
-                        const char* pathC = env->GetStringUTFChars(pathJ, nullptr);
-                        if (pathC != nullptr) dirPath = pathC;
-                        env->ReleaseStringUTFChars(pathJ, pathC);
-                        env->DeleteLocalRef(pathJ);
-                    }
-                    env->DeleteLocalRef(fileObj);
-                }
-            }
-
             std::string foundStr = std::to_string(k);
-            if (!dirPath.empty()) {
-                save_result_to_dir(dirPath, foundStr);
-            } else {
-                LOGI("Found key (no dir): %s", foundStr.c_str());
-            }
-
             if (onKeyFound_mid != nullptr) {
                 jstring jkey = env->NewStringUTF(foundStr.c_str());
                 env->CallVoidMethod(callback, onKeyFound_mid, jkey);
@@ -180,9 +147,7 @@ void search_range_thread(ThreadParams* params) {
 
     if (onSearchFinished_mid != nullptr) env->CallVoidMethod(callback, onSearchFinished_mid);
 
-    if (fileCls != nullptr) env->DeleteGlobalRef(fileCls);
     env->DeleteGlobalRef(callback);
-
     jvm->DetachCurrentThread();
 
     delete params;
@@ -200,7 +165,6 @@ Java_com_example_keysearchapp_MainActivity_startSearchNative(JNIEnv *env, jobjec
 
     JavaVM* jvm = nullptr;
     if (env->GetJavaVM(&jvm) != JNI_OK) {
-        LOGI("Failed to get JavaVM");
         env->ReleaseStringUTFChars(targetAddr, target);
         return;
     }
