@@ -26,7 +26,7 @@ class MainActivity : AppCompatActivity() {
     // ViewModel to hold the state
     private val viewModel: SearchViewModel by viewModels()
 
-    // Native functions
+    // Native functions (declarations stay same)
     private external fun startSearchNative(start: Long, end: Long, targetAddress: String, callback: KeySearchCallback)
     private external fun pauseSearchNative()
     private external fun resumeSearchNative()
@@ -98,24 +98,54 @@ class MainActivity : AppCompatActivity() {
                 val startKey = startEdit.text.toString().toLong()
                 val endKey = endEdit.text.toString().toLong()
 
-                viewModel.startSearch(endKey - startKey + 1)
-                startSearchNative(startKey, endKey, target, keySearchCallback)
+                // Attempt to load native library here (delayed load).
+                try {
+                    System.loadLibrary("native-lib")
+                } catch (t: Throwable) {
+                    // If library not found or load failed, show clear message instead of crash.
+                    Toast.makeText(this, "Failed to load native library: ${t.message}", Toast.LENGTH_LONG).show()
+                    return@setOnClickListener
+                }
+
+                // Wrap native call in try/catch to prevent native exceptions from killing app silently
+                try {
+                    viewModel.startSearch(endKey - startKey + 1)
+                    startSearchNative(startKey, endKey, target, keySearchCallback)
+                } catch (e: UnsatisfiedLinkError) {
+                    Toast.makeText(this, "Native method not found: ${e.message}", Toast.LENGTH_LONG).show()
+                    viewModel.forceStopState()
+                } catch (e: Throwable) {
+                    Toast.makeText(this, "Error starting native search: ${e.message}", Toast.LENGTH_LONG).show()
+                    viewModel.forceStopState()
+                }
             }
         }
 
         pauseBtn.setOnClickListener {
             if (viewModel.searchState.value == SearchViewModel.State.PAUSED) {
-                resumeSearchNative()
-                viewModel.setPaused(false)
+                try {
+                    resumeSearchNative()
+                    viewModel.setPaused(false)
+                } catch (t: Throwable) {
+                    Toast.makeText(this, "Error resuming native search: ${t.message}", Toast.LENGTH_SHORT).show()
+                }
             } else {
-                pauseSearchNative()
-                viewModel.setPaused(true)
+                try {
+                    pauseSearchNative()
+                    viewModel.setPaused(true)
+                } catch (t: Throwable) {
+                    Toast.makeText(this, "Error pausing native search: ${t.message}", Toast.LENGTH_SHORT).show()
+                }
             }
         }
 
         stopBtn.setOnClickListener {
-            stopSearchNative()
-            statusText.text = "جاري الإيقاف..."
+            try {
+                stopSearchNative()
+                statusText.text = "جاري الإيقاف..."
+            } catch (t: Throwable) {
+                Toast.makeText(this, "Error stopping native search: ${t.message}", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -182,15 +212,11 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         if (!isChangingConfigurations) {
-           stopSearchNative()
+           try {
+               stopSearchNative()
+           } catch (_: Throwable) { /* ignore */ }
         }
         super.onDestroy()
-    }
-
-    companion object {
-        init {
-            System.loadLibrary("native-lib")
-        }
     }
 
     // Callback interface must be accessible by native code
