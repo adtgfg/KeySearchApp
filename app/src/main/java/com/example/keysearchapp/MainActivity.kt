@@ -1,99 +1,60 @@
 package com.example.keysearchapp
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
+import android.content.Intent
+import android.os.Bundle
+import android.widget.*
+import androidx.appcompat.app.AppCompatActivity
 
-class SearchViewModel : ViewModel() {
+class MainActivity : AppCompatActivity() {
 
-    enum class State { STOPPED, SEARCHING, PAUSED, FOUND }
+    private lateinit var startBtn: Button
+    private lateinit var pauseBtn: Button
+    private lateinit var stopBtn: Button
+    private lateinit var targetEdit: EditText
+    private lateinit var startEdit: EditText
+    private lateinit var endEdit: EditText
+    private lateinit var statusText: TextView
+    private lateinit var progressStatsText: TextView
+    private lateinit var progressBar: ProgressBar
 
-    private val _searchState = MutableLiveData(State.STOPPED)
-    val searchState: LiveData<State> = _searchState
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
 
-    private val _progress = MutableLiveData(0)
-    val progress: LiveData<Int> = _progress
+        startBtn = findViewById(R.id.startBtn)
+        pauseBtn = findViewById(R.id.pauseBtn)
+        stopBtn = findViewById(R.id.stopBtn)
+        targetEdit = findViewById(R.id.targetEdit)
+        startEdit = findViewById(R.id.startEdit)
+        endEdit = findViewById(R.id.endEdit)
+        statusText = findViewById(R.id.statusText)
+        progressStatsText = findViewById(R.id.progressStatsText)
+        progressBar = findViewById(R.id.progressBar)
 
-    private val _statsText = MutableLiveData("Waiting for search to start...")
-    val statsText: LiveData<String> = _statsText
-
-    private val _foundKey = MutableLiveData<String?>(null)
-    val foundKey: LiveData<String?> = _foundKey
-
-    private var totalKeys: Long = 0
-    private var searchStartTime: Long = 0
-
-    // ربط MainActivity لتتمكن من استدعاء دوال native
-    private var mainActivity: MainActivity? = null
-
-    // بدء البحث واستدعاء الدالة الأصلية
-    fun startSearch(start: Long, end: Long, target: String, activity: MainActivity) {
-        mainActivity = activity
-        totalKeys = end - start + 1
-        searchStartTime = System.currentTimeMillis()
-        _searchState.value = State.SEARCHING
-        _progress.value = 0
-        _statsText.value = "Starting up..."
-        _foundKey.value = null
-        // استدعاء البحث من native-lib
-        mainActivity?.startSearchNative(start, end, target, mainActivity!!)
-    }
-
-    // إيقاف مؤقت للبحث
-    fun pauseSearch() {
-        mainActivity?.pauseSearchNative()
-        _searchState.value = State.PAUSED
-        _statsText.value = "تم إيقاف البحث مؤقتًا."
-    }
-
-    // استئناف البحث
-    fun resumeSearch() {
-        mainActivity?.resumeSearchNative()
-        _searchState.value = State.SEARCHING
-        _statsText.value = "تم استئناف البحث."
-    }
-
-    // إيقاف البحث نهائيًا
-    fun stopSearch() {
-        mainActivity?.stopSearchNative()
-        _searchState.value = State.STOPPED
-        _statsText.value = "تم إيقاف البحث من قبل المستخدم."
-    }
-
-    // عند إيجاد مفتاح
-    fun onKeyFound(key: String) {
-        _searchState.value = State.FOUND
-        _foundKey.value = key
-        _progress.value = 100
-        _statsText.value = "تم إيجاد المفتاح!"
-    }
-
-    // تحديث التقدم
-    fun onProgressUpdate(keysChecked: Long) {
-        if (_searchState.value == State.SEARCHING || _searchState.value == State.PAUSED) {
-            if (totalKeys > 0) {
-                _progress.value = ((keysChecked * 100) / totalKeys).toInt()
-            }
-            val elapsedTimeSec = (System.currentTimeMillis() - searchStartTime) / 1000.0
-            if (elapsedTimeSec > 1) { // انتظر ثانية لمعدل ثابت
-                val keysPerSecond = keysChecked / elapsedTimeSec
-                _statsText.value = String.format(
-                    "%.0f مفتاح/ثانية | فحص: %d / %d",
-                    keysPerSecond, keysChecked, totalKeys
-                )
+        startBtn.setOnClickListener {
+            val start = startEdit.text.toString().toLongOrNull() ?: 0L
+            val end = endEdit.text.toString().toLongOrNull() ?: 1000000L
+            val target = targetEdit.text.toString()
+            if (target.isNotEmpty()) {
+                val serviceIntent = Intent(this, SearchService::class.java)
+                serviceIntent.putExtra("start", start)
+                serviceIntent.putExtra("end", end)
+                serviceIntent.putExtra("target", target)
+                startForegroundService(serviceIntent)
+                statusText.text = "بدأ البحث في الخلفية..."
+            } else {
+                Toast.makeText(this, "يرجى إدخال العنوان المستهدف", Toast.LENGTH_SHORT).show()
             }
         }
-    }
 
-    // إنهاء البحث
-    fun onSearchFinished() {
-        if (_searchState.value != State.FOUND) {
-            _searchState.value = State.STOPPED
-            if (_progress.value != 100) {
-                _statsText.value = "تم إيقاف البحث من قبل المستخدم."
-            } else {
-                _statsText.value = "اكتمل البحث ولم يتم إيجاد المفتاح."
-            }
+        pauseBtn.setOnClickListener {
+            SearchService().pauseSearchNative()
+            statusText.text = "تم إيقاف البحث مؤقتًا."
+        }
+
+        stopBtn.setOnClickListener {
+            SearchService().stopSearchNative()
+            statusText.text = "تم إيقاف البحث."
         }
     }
 }
