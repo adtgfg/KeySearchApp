@@ -19,11 +19,11 @@ include_directories(${CMAKE_SOURCE_DIR}/openssl/include)
 # المكتبات الجاهزة
 add_library(crypto SHARED IMPORTED)
 set_target_properties(crypto PROPERTIES
-    IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/../jniLibs/${ANDROID_ABI}/libcrypto.so)
+    IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/../jniLibs/${ANDROID_ABI}/lib/libcrypto.so)
 
 add_library(ssl SHARED IMPORTED)
 set_target_properties(ssl PROPERTIES
-    IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/../jniLibs/${ANDROID_ABI}/libssl.so)
+    IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/../jniLibs/${ANDROID_ABI}/lib/libssl.so)
 
 # مكتبات أندرويد
 find_library(log-lib log)
