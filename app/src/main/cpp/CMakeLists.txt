@@ -13,6 +13,10 @@ add_library(native-lib SHARED ${NATIVE_SRC})
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# إضافة مسار هيدرز OpenSSL
+# هنا لازم نوقف عند include لأن داخله مجلد openssl/
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/openssl/include)
+
 # مكتبات OpenSSL الجاهزة (.so) من jniLibs
 add_library(crypto SHARED IMPORTED)
 set_target_properties(crypto PROPERTIES
