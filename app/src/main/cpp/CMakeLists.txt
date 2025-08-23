@@ -14,16 +14,16 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # الهيدرز
-include_directories(${CMAKE_SOURCE_DIR}/src/main/cpp/openssl/include)
+include_directories(${CMAKE_SOURCE_DIR}/openssl/include)
 
 # المكتبات الجاهزة
 add_library(crypto SHARED IMPORTED)
 set_target_properties(crypto PROPERTIES
-    IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/src/main/jniLibs/${ANDROID_ABI}/libcrypto.so)
+    IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/../jniLibs/${ANDROID_ABI}/libcrypto.so)
 
 add_library(ssl SHARED IMPORTED)
 set_target_properties(ssl PROPERTIES
-    IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/src/main/jniLibs/${ANDROID_ABI}/libssl.so)
+    IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/../jniLibs/${ANDROID_ABI}/libssl.so)
 
 # مكتبات أندرويد
 find_library(log-lib log)
