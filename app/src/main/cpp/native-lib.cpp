@@ -153,9 +153,10 @@ void search_range_thread(ThreadParams* params) {
     delete params;
 }
 
+// الدالة الجديدة للبحث عبر الخدمة
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_keysearchapp_MainActivity_startSearchNative(JNIEnv *env, jobject thiz,
+Java_com_example_keysearchapp_SearchService_startSearchNative(JNIEnv *env, jobject thiz,
                                                              jlong start, jlong end,
                                                              jstring targetAddr,
                                                              jobject callback) {
@@ -171,33 +172,42 @@ Java_com_example_keysearchapp_MainActivity_startSearchNative(JNIEnv *env, jobjec
 
     jobject callbackGlobal = env->NewGlobalRef(callback);
 
-    ThreadParams* params = new ThreadParams();
-    params->jvm = jvm;
-    params->callbackGlobal = callbackGlobal;
-    params->start = (uint64_t)start;
-    params->end = (uint64_t)end;
-    params->target_address = std::string(target ? target : "");
+    int numThreads = std::thread::hardware_concurrency();
+    uint64_t totalKeys = end - start + 1;
+    uint64_t keysPerThread = totalKeys / numThreads;
 
-    std::thread t(search_range_thread, params);
-    t.detach();
+    for (int i = 0; i < numThreads; i++) {
+        uint64_t threadStart = start + i * keysPerThread;
+        uint64_t threadEnd = (i == numThreads - 1) ? end : (threadStart + keysPerThread - 1);
+
+        ThreadParams* params = new ThreadParams();
+        params->jvm = jvm;
+        params->callbackGlobal = callbackGlobal;
+        params->start = threadStart;
+        params->end = threadEnd;
+        params->target_address = std::string(target ? target : "");
+
+        std::thread t(search_range_thread, params);
+        t.detach();
+    }
 
     env->ReleaseStringUTFChars(targetAddr, target);
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_keysearchapp_MainActivity_pauseSearchNative(JNIEnv *env, jobject thiz) {
+Java_com_example_keysearchapp_SearchService_pauseSearchNative(JNIEnv *env, jobject thiz) {
     g_pause.store(true);
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_keysearchapp_MainActivity_resumeSearchNative(JNIEnv *env, jobject thiz) {
+Java_com_example_keysearchapp_SearchService_resumeSearchNative(JNIEnv *env, jobject thiz) {
     g_pause.store(false);
 }
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_keysearchapp_MainActivity_stopSearchNative(JNIEnv *env, jobject thiz) {
+Java_com_example_keysearchapp_SearchService_stopSearchNative(JNIEnv *env, jobject thiz) {
     g_found.store(true);
-}
+}                                               
