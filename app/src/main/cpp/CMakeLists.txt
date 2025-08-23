@@ -1,21 +1,21 @@
 cmake_minimum_required(VERSION 3.10.2)
 
-# تعريف اسم المشروع
 project("keysearchapp")
 
-# إضافة مكتبة "native-lib" المشتركة من ملف native-lib.cpp
+# إضافة المكتبة الرئيسية (native-lib.cpp)
 add_library(
         native-lib
         SHARED
         native-lib.cpp)
 
-# البحث عن مكتبة سجلات أندرويد (log)
-find_library(log-lib log)
+# مكتبة log (مدمجة مع أندرويد)
+find_library(
+        log-lib
+        log)
 
-# ربط المكتبة الأصلية مع مكتبات النظام الخارجية المطلوبة
+# ربط المكتبة مع log + OpenSSL (إن وجد)
 target_link_libraries(
         native-lib
         ${log-lib}
-        ssl
-        crypto)
-
+        crypto
+        ssl)
