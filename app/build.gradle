@@ -23,14 +23,18 @@ android {
 
         // المعماريات المدعومة
         ndk {
-            abiFilters "arm64-v8a", "armeabi-v7a", "x86", "x86_64"
+            abiFilters "arm64-v8a", "armeabi-v7a"
         }
     }
 
     buildTypes {
         release {
             minifyEnabled false
+            shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            debuggable true
         }
     }
 
@@ -52,14 +56,26 @@ android {
         jniLibs {
             useLegacyPackaging = true
         }
+        resources.excludes += [
+                "META-INF/LICENSE.txt",
+                "META-INF/NOTICE.txt",
+                "META-INF/DEPENDENCIES",
+                "META-INF/NOTICE",
+                "META-INF/LICENSE"
+        ]
     }
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+
     kotlinOptions {
         jvmTarget = '17'
+    }
+
+    buildFeatures {
+        viewBinding true
     }
 }
 
@@ -70,4 +86,5 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.6.2"
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2"
+    implementation "androidx.localbroadcastmanager:localbroadcastmanager:1.1.0"
 }
