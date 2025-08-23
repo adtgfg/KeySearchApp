@@ -13,17 +13,14 @@ add_library(native-lib SHARED ${NATIVE_SRC})
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# مسار الهيدرز (في حال استعملت OpenSSL headers مدمجة)
-include_directories(${CMAKE_SOURCE_DIR}/openssl/include)
-
-# المكتبات الجاهزة - ملاحظة: الآن في مجلد lib/
+# مكتبات OpenSSL الجاهزة (.so) من jniLibs
 add_library(crypto SHARED IMPORTED)
 set_target_properties(crypto PROPERTIES
-    IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/../jniLibs/${ANDROID_ABI}/lib/libcrypto.so)
+    IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/../jniLibs/${ANDROID_ABI}/libcrypto.so)
 
 add_library(ssl SHARED IMPORTED)
 set_target_properties(ssl PROPERTIES
-    IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/../jniLibs/${ANDROID_ABI}/lib/libssl.so)
+    IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/../jniLibs/${ANDROID_ABI}/libssl.so)
 
 # مكتبات أندرويد الافتراضية
 find_library(log-lib log)
